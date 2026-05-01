@@ -1,6 +1,4 @@
-
-# Create the new crash-proof backend app.py
-backend_code = '''"""
+"""
 Business Lead Generator — Flask Backend API
 ============================================
 Crash-proof deployment on Railway/Render without Selenium.
@@ -103,9 +101,9 @@ def extract_website(text, base_domain=""):
         href = a["href"]
         if href.startswith("http") and not any(x in href.lower() for x in ["google.com", "youtube.com", "facebook.com", "instagram.com", "twitter.com", "x.com", "linkedin.com", "tiktok.com"]):
             return href
-    
+
     # Regex fallback for domain patterns
-    domain_re = r"https?://(?:www\.)?([a-zA-Z0-9][a-zA-Z0-9\-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,})(?:/[^\s\"<>]*)?"
+    domain_re = r"https?://(?:www\.)?([a-zA-Z0-9][a-zA-Z0-9\-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,})(?:/[^\s"<>]*)?"
     found = re.findall(domain_re, text)
     if found:
         return "https://www." + found[0]
@@ -119,26 +117,26 @@ def scrape_google_maps(query, location, max_results=20):
     """Scrape business listings from Google Maps via search."""
     results = []
     search_query = quote_plus(f"{query} {location}")
-    
+
     # Try multiple Google endpoints
     urls = [
         f"https://www.google.com/search?q={search_query}&tbm=lcl",
         f"https://www.google.com/search?q={search_query}+business+directory",
         f"https://www.google.com/search?q={search_query}+contact",
     ]
-    
+
     for url in urls:
         html = fetch_html(url, timeout=15)
         if not html:
             continue
-            
+
         soup = BeautifulSoup(html, "html.parser")
-        
+
         # Extract business cards from Google local results
         cards = soup.find_all("div", class_=re.compile(r"(VkpGBb|g|rlfl__tls|rl_tile-group)"))
         if not cards:
             cards = soup.find_all("div", attrs={"data-attrid": True})
-        
+
         for card in cards[:max_results]:
             try:
                 # Extract name
@@ -146,15 +144,15 @@ def scrape_google_maps(query, location, max_results=20):
                 name = name_elem.get_text(strip=True) if name_elem else ""
                 if not name or len(name) < 2:
                     continue
-                
+
                 # Extract address
                 addr_elem = card.find("span", class_=re.compile(r"(LrzXr|address|street-address)")) or card.find("div", class_=re.compile(r"address"))
                 address = addr_elem.get_text(strip=True) if addr_elem else ""
-                
+
                 # Extract phone
                 phone_elem = card.find("span", class_=re.compile(r"(phone|LrzXr|oyrXab)"))
                 phone = phone_elem.get_text(strip=True) if phone_elem else ""
-                
+
                 # Extract website
                 web_elem = card.find("a", class_=re.compile(r"(ab_button|yYlJEf|a)"), href=True)
                 website = ""
@@ -162,11 +160,11 @@ def scrape_google_maps(query, location, max_results=20):
                     href = web_elem["href"]
                     if href.startswith("http") and "google.com" not in href:
                         website = href
-                
+
                 # Extract rating/reviews
                 rating_elem = card.find("span", class_=re.compile(r"(rating|Y0A0hc)"))
                 rating = rating_elem.get_text(strip=True) if rating_elem else ""
-                
+
                 business = {
                     "name": name,
                     "address": address,
@@ -178,16 +176,16 @@ def scrape_google_maps(query, location, max_results=20):
                     "socials": {},
                     "contacts": []
                 }
-                
+
                 if business not in results:
                     results.append(business)
-                    
+
             except Exception as e:
                 continue
-        
+
         if len(results) >= max_results:
             break
-    
+
     return results[:max_results]
 
 # ════════════════════════════════════════════════════════════
@@ -198,43 +196,43 @@ def scrape_yelp_style(query, location, max_results=15):
     """Scrape Yelp-style business listings."""
     results = []
     search_query = quote_plus(f"{query} {location}")
-    
+
     # Try Yelp search
     url = f"https://www.yelp.com/search?find_desc={quote_plus(query)}&find_loc={quote_plus(location)}"
     html = fetch_html(url, timeout=15)
-    
+
     if html:
         soup = BeautifulSoup(html, "html.parser")
         businesses = soup.find_all("div", class_=re.compile(r"(container__09f24__|businessName__|arrange__)"))
-        
+
         for biz in businesses[:max_results]:
             try:
                 name_elem = biz.find("a", class_=re.compile(r"(css-19v1rkv|business-name)"))
                 name = name_elem.get_text(strip=True) if name_elem else ""
                 if not name:
                     continue
-                
+
                 # Get Yelp page for more details
                 yelp_url = "https://yelp.com" + name_elem["href"] if name_elem and name_elem.get("href") else ""
-                
+
                 address = ""
                 phone = ""
                 website = ""
-                
+
                 if yelp_url:
                     yelp_html = fetch_html(yelp_url, timeout=10)
                     if yelp_html:
                         yelp_soup = BeautifulSoup(yelp_html, "html.parser")
                         addr_elem = yelp_soup.find("address") or yelp_soup.find("p", class_=re.compile(r"address"))
                         address = addr_elem.get_text(strip=True) if addr_elem else ""
-                        
+
                         phone_elem = yelp_soup.find("p", class_=re.compile(r"phone")) or yelp_soup.find("a", href=re.compile(r"tel:"))
                         phone = phone_elem.get_text(strip=True) if phone_elem else ""
-                        
+
                         web_elem = yelp_soup.find("a", class_=re.compile(r"website"), href=True)
                         if web_elem:
                             website = web_elem["href"]
-                
+
                 results.append({
                     "name": name,
                     "address": address,
@@ -248,7 +246,7 @@ def scrape_yelp_style(query, location, max_results=15):
                 })
             except:
                 continue
-    
+
     return results[:max_results]
 
 # ════════════════════════════════════════════════════════════
@@ -259,13 +257,13 @@ def deep_scrape_website(url):
     """Deep scrape a business website for contact info and team details."""
     if not url or not url.startswith("http"):
         return {"emails": [], "phones": [], "socials": {}, "contacts": [], "addresses": []}
-    
+
     data = {"emails": [], "phones": [], "socials": {}, "contacts": [], "addresses": []}
-    
+
     # Scrape main page + contact + about + team pages
     pages_to_scrape = ["", "/contact", "/about", "/team", "/about-us", "/contact-us", "/our-team", "/leadership"]
     combined_html = ""
-    
+
     for page in pages_to_scrape:
         try:
             full_url = url.rstrip("/") + page
@@ -274,28 +272,28 @@ def deep_scrape_website(url):
                 combined_html += html + " "
         except:
             pass
-    
+
     if not combined_html:
         return data
-    
+
     # Extract emails
     data["emails"] = extract_emails(combined_html)
-    
+
     # Extract phones
     data["phones"] = extract_phones(combined_html)
-    
+
     # Extract socials
     data["socials"] = extract_socials(combined_html)
-    
+
     # Extract team members / leadership
     soup = BeautifulSoup(combined_html, "html.parser")
-    
+
     # Look for team member patterns
     team_patterns = [
         (r"(CEO|Founder|Owner|President|Director|Manager|Partner)", "leadership"),
         (r"([A-Z][a-z]+\s[A-Z][a-z]+)\s*[-–—]\s*(CEO|Founder|Owner|President|Director|Manager)", "named_role"),
     ]
-    
+
     for pattern, ptype in team_patterns:
         matches = re.findall(pattern, combined_html)
         for match in matches:
@@ -304,14 +302,14 @@ def deep_scrape_website(url):
             else:
                 name = match
                 role = "Team Member"
-            
+
             # Try to find email for this person
             person_email = ""
             for email in data["emails"]:
                 if name.split()[0].lower() in email.lower() or name.split()[-1].lower() in email.lower():
                     person_email = email
                     break
-            
+
             contact = {
                 "name": name.strip(),
                 "role": role.strip(),
@@ -319,11 +317,11 @@ def deep_scrape_website(url):
                 "phone": data["phones"][0] if data["phones"] else "",
                 "linkedin": ""
             }
-            
+
             # Avoid duplicates
             if not any(c["name"] == contact["name"] for c in data["contacts"]):
                 data["contacts"].append(contact)
-    
+
     # Extract addresses
     addr_patterns = [
         r"\d+\s+[A-Za-z0-9\s,]+(?:Avenue|Lane|Road|Boulevard|Drive|Street|Ave|Ln|Rd|Blvd|Dr|St)\.?\s*[A-Za-z]*,\s*[A-Za-z]+\s*\d{5}",
@@ -333,7 +331,7 @@ def deep_scrape_website(url):
         found = re.findall(pat, combined_html)
         data["addresses"].extend(found)
     data["addresses"] = list(dict.fromkeys(data["addresses"]))[:3]
-    
+
     return data
 
 # ════════════════════════════════════════════════════════════
@@ -345,7 +343,7 @@ def scrape_facebook_pages(query, location, max_results=10):
     results = []
     search_query = quote_plus(f"{query} {location}")
     url = f"https://www.facebook.com/search/pages/?q={search_query}"
-    
+
     html = fetch_html(url, timeout=12)
     if html:
         soup = BeautifulSoup(html, "html.parser")
@@ -377,7 +375,7 @@ def scrape_linkedin_companies(query, location, max_results=10):
     results = []
     search_query = quote_plus(f"{query} {location}")
     url = f"https://www.linkedin.com/search/results/companies/?keywords={search_query}"
-    
+
     html = fetch_html(url, timeout=12)
     if html:
         soup = BeautifulSoup(html, "html.parser")
@@ -407,7 +405,7 @@ def aggregate_leads(niche, location, max_results=20):
     """Aggregate leads from multiple sources."""
     all_results = []
     seen_names = set()
-    
+
     # Source 1: Google Maps
     log.info(f"Scraping Google Maps for {niche} in {location}")
     maps_results = scrape_google_maps(niche, location, max_results=max_results)
@@ -415,7 +413,7 @@ def aggregate_leads(niche, location, max_results=20):
         if r["name"] not in seen_names:
             seen_names.add(r["name"])
             all_results.append(r)
-    
+
     # Source 2: Yelp/Directories
     if len(all_results) < max_results:
         log.info("Scraping Yelp-style directories")
@@ -424,7 +422,7 @@ def aggregate_leads(niche, location, max_results=20):
             if r["name"] not in seen_names:
                 seen_names.add(r["name"])
                 all_results.append(r)
-    
+
     # Source 3: Facebook
     if len(all_results) < max_results:
         log.info("Scraping Facebook pages")
@@ -433,14 +431,14 @@ def aggregate_leads(niche, location, max_results=20):
             if r["name"] not in seen_names:
                 seen_names.add(r["name"])
                 all_results.append(r)
-    
+
     # Deep scrape websites for enriched data
     log.info("Deep scraping websites for contact enrichment")
     for i, business in enumerate(all_results):
         if business.get("website"):
             log.info(f"Deep scraping: {business['website']}")
             web_data = deep_scrape_website(business["website"])
-            
+
             # Merge enriched data
             if web_data["emails"]:
                 business["emails"] = web_data["emails"]
@@ -452,11 +450,11 @@ def aggregate_leads(niche, location, max_results=20):
                 business["contacts"] = web_data["contacts"][:3]  # Top 3 contacts
             if web_data["addresses"] and not business["address"]:
                 business["address"] = web_data["addresses"][0]
-        
+
         # Small delay to be respectful
         if i % 3 == 0:
             time.sleep(random.uniform(0.5, 1.5))
-    
+
     return all_results[:max_results]
 
 # ════════════════════════════════════════════════════════════
@@ -479,18 +477,18 @@ def scrape():
     niche = body.get("niche", "").strip()
     location = body.get("location", "").strip()
     max_results = int(body.get("max_results", 20))
-    
+
     if not niche or not location:
         return jsonify({"error": "niche and location are required"}), 400
-    
+
     if max_results > 100:
         max_results = 100
     if max_results < 1:
         max_results = 10
-    
+
     try:
         results = aggregate_leads(niche, location, max_results=max_results)
-        
+
         return jsonify({
             "query": f"{niche} {location}",
             "count": len(results),
@@ -506,7 +504,7 @@ def scrape():
 def export_csv():
     body = request.get_json() or {}
     results = body.get("results", [])
-    
+
     # Flatten contacts for CSV
     flat_results = []
     for r in results:
@@ -525,7 +523,7 @@ def export_csv():
             "rating": r.get("rating", ""),
             "source": r.get("source", ""),
         }
-        
+
         contacts = r.get("contacts", [])
         if contacts:
             for i, contact in enumerate(contacts[:3]):
@@ -538,17 +536,17 @@ def export_csv():
                 flat_results.append(row)
         else:
             flat_results.append(base)
-    
+
     if not flat_results:
         return jsonify({"error": "No results to export"}), 400
-    
+
     # Build fieldnames
     fieldnames = list(flat_results[0].keys())
     buf = io.StringIO()
     writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
     writer.writerows(flat_results)
-    
+
     return Response(
         buf.getvalue(),
         mimetype="text/csv",
@@ -557,12 +555,3 @@ def export_csv():
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
-'''
-
-with open('/mnt/agents/output/app.py', 'w', encoding='utf-8') as f:
-    f.write(backend_code)
-
-print("✅ Crash-proof backend saved to /mnt/agents/output/app.py")
-print("   - Removed Selenium/ChromeDriver dependency")
-print("   - Pure requests + BeautifulSoup scraping")
-print("   - Multi-source: Google Maps, Yelp, Facebook, LinkedIn, Website Deep Scrape")
