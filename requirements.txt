@@ -1,6 +1,25 @@
-flask
-flask-cors
-requests
-beautifulsoup4
-gunicorn
-lxml
+
+# Create the updated requirements.txt (no Selenium!)
+requirements = """flask==3.0.3
+flask-cors==4.0.1
+requests==2.31.0
+beautifulsoup4==4.12.3
+lxml==4.9.4
+gunicorn==21.2.0
+"""
+
+with open('/mnt/agents/output/requirements.txt', 'w') as f:
+    f.write(requirements)
+
+# Create Procfile for Railway
+procfile = "web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120\n"
+with open('/mnt/agents/output/Procfile', 'w') as f:
+    f.write(procfile)
+
+print("✅ requirements.txt saved (NO Selenium/ChromeDriver)")
+print("✅ Procfile saved for Railway deployment")
+print("\n📦 FILES READY FOR DEPLOYMENT:")
+print("   1. app.py — Crash-proof Flask backend")
+print("   2. leadforge_frontend.html — New business-focused UI")
+print("   3. requirements.txt — Clean dependencies")
+print("   4. Procfile — Railway startup command")
