@@ -1,11 +1,1 @@
- "web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120\n"
-with open('/mnt/agents/output/Procfile', 'w') as f:
-    f.write(procfile)
-
-print("✅ requirements.txt saved (NO Selenium/ChromeDriver)")
-print("✅ Procfile saved for Railway deployment")
-print("\n📦 FILES READY FOR DEPLOYMENT:")
-print("   1. app.py — Crash-proof Flask backend")
-print("   2. leadforge_frontend.html — New business-focused UI")
-print("   3. requirements.txt — Clean dependencies")
-print("   4. Procfile — Railway startup command")
+web: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
